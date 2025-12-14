@@ -72,5 +72,5 @@ This is a learning project, but suggestions are welcome! Feel free to open an is
 
 ## 📧 Contact
 
-[Your Name] - [your-email@example.com]
+Philobatir Nabil  - [philobatir.nabil@proton.me]
 Portfolio: [your-portfolio-site.com]
