@@ -31,7 +31,13 @@
 *.out
 *.app
 .DS_Store
-/Users/philo/Desktop/vex-robotics-pd-controller/.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
 *.vscode
 
 /include/
