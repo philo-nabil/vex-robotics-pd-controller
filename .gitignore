@@ -31,6 +31,7 @@
 *.out
 *.app
 .DS_Store
+/Users/philo/Desktop/vex-robotics-pd-controller/.DS_Store
 *.vscode
 
 /include/
