@@ -15,7 +15,7 @@ A proportional-derivative (PD) controller implementation for VEX IQ robotics pla
 ## 🛠️ Technical Details
 
 ### Hardware
-- VEX IQ Brain
+- VEX IQ Brain (1st gen)
 - 2x Drive Motors (Ports 1, 7)
 - 2x Arm Motors (Ports 5, 11)
 - Gyroscope Sensor (Port 8)
