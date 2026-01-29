@@ -140,6 +140,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
 void pivotRightToAngle(float targetAngle)
 {
   right_motor.stop(hold);
+  
   float headingError = 0.0, previousHeadingError = 0.0;
 
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)  
@@ -169,6 +170,8 @@ void pivotRightToAngle(float targetAngle)
 
 void pivotLeftToAngle(float targetAngle)
 {
+  left_motor.stop(hold);
+
   float headingError = 0.0, previousHeadingError = 0.0;
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
   {
@@ -176,22 +179,22 @@ void pivotLeftToAngle(float targetAngle)
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
 
-    // right_motor.setVelocity((headingError * pivotProportionalGain + pivotDerivativeGain * (headingError - previousHeadingError)), percent);
     double velocity = headingError * pivotProportionalGain + pivotDerivativeGain * (headingError - previousHeadingError);
     
     // Clamp velocity
     if (velocity > 100.0) velocity = 100.0;
     if (velocity < -100.0) velocity = -100.0;
 
-    left_motor.setVelocity(fabs(velocity), percent);
+    right_motor.setVelocity(fabs(velocity), percent);
     if (velocity > 0) {
-      left_motor.spin(forward);
+      right_motor.spin(forward);
     } else {
-      left_motor.spin(reverse);
+      right_motor.spin(reverse);
     }
     previousHeadingError = headingError;
     wait(20, msec);
   }
+  right_motor.stop(hold);
   left_motor.stop(hold);
 }
 
