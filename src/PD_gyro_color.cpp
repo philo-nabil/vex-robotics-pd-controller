@@ -334,11 +334,8 @@ int main()
 {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
-  configureRobot();
+  
 
-  // register event handlers
-  B.pressed(B_handleButtonPressed);
-  C.pressed(C_handleButtonPressed);
 
   wait(15, msec);
 }
