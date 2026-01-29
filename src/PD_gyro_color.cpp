@@ -139,6 +139,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
 // Defined functions
 void pivotRightToAngle(float targetAngle)
 {
+  right_motor.stop(hold);
   float headingError = 0.0, previousHeadingError = 0.0;
 
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)  
@@ -153,15 +154,16 @@ void pivotRightToAngle(float targetAngle)
     if (velocity > 100.0) velocity = 100.0;
     if (velocity < -100.0) velocity = -100.0;
 
-    right_motor.setVelocity(fabs(velocity), percent);
+    left_motor.setVelocity(fabs(velocity), percent);
     if (velocity > 0) {
-      right_motor.spin(forward);
+      left_motor.spin(forward);
     } else {
-      right_motor.spin(reverse);
+      left_motor.spin(reverse);
     }
     previousHeadingError = headingError;
     wait(20, msec);
   }
+  left_motor.stop(hold);
   right_motor.stop(hold);
 }
 
