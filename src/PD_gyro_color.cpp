@@ -32,7 +32,7 @@ touchled C = touchled(PORT6);
 touchled B = touchled(PORT12);
 motor ArmMotorA = motor(PORT5, false);
 motor ArmMotorB = motor(PORT11, true);
-motor_group Arm = motor_group(ArmMotorA, ArmMotorB);
+motor_group four_bar = motor_group(ArmMotorA, ArmMotorB);
 
 colorsensor Color2 = colorsensor(PORT2);
 
@@ -297,28 +297,27 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
 }
 
 // "when started" hat block
-int configureRobot()
+/*int configureRobot()
 {
   C.setColor(red);
   B.setColor(red);
 
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
-  Arm.setMaxTorque(100.0, percent);
 
-  straightProportionalGain = -1.825;
-  straightDerivativeGain = -5.6;
+  straightProportionalGain = 0;   // <--- Modify
+  straightDerivativeGain = 0;     // <--- Modify
 
-  pivotProportionalGain = -3.3;
-  pivotDerivativeGain = -1.4;
+  pivotProportionalGain = 0;      // <--- Modify
+  pivotDerivativeGain = 0;        // <--- Modify
 
-  spinProportionalGain = 3.0;
-  spinDerivativeGain = 9.5;
+  spinProportionalGain = 0;       // <--- Modify
+  spinDerivativeGain = 0;         // <--- Modify
 
-  whiteReferenceValue = 89.0;
-  blackReferenceValue = 12.0;
+  whiteReferenceValue = 0;        // <--- Modify
+  blackReferenceValue = 0;        // <--- Modify
   
-  Color2.setLight(30, percent);
+  Color2.setLight(30, percent);   // <--- Modify
   Gyro8.calibrate(calNormal);
   while (Gyro8.isCalibrating())
   {
@@ -329,29 +328,7 @@ int configureRobot()
   B.setColor(blue);
   return 0;
 }
-
-
-void B_handleButtonPressed()
-{
-  driveForwardUntilBlack(-60.0, 0.0, 220.0);
-  pivotRightToAngle(-90.0);
-  driveStraightWithRamp(20.0, 200.0, -90.0, 70.0);
-  spinToAngle(-89.0);
-  Arm.spinFor(forward, 40.0, degrees, true);
-  driveStraightWithRamp(-30.0, 330.0, -89.0, -70.0);
-}
-
-// "when C pressed" hat block
-void C_handleButtonPressed()
-{
-  driveForwardUntilBlack(60.0, 0.0, 0.0);
-  pivotRightToAngle(-90.0);
-  driveStraightWithRamp(20.0, 200.0, -90.0, 70.0);
-  spinToAngle(-89.0);
-  Arm.spinFor(forward, 40.0, degrees, true);
-  driveStraightWithRamp(-30.0, 330.0, -89.0, -70.0);
-}
-
+*/
 
 int main()
 {
