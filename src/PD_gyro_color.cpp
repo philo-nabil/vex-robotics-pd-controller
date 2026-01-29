@@ -218,11 +218,11 @@ void spinToAngle(float targetAngle)
     right_motor.setVelocity(fabs(velocity), percent);
 
     if (velocity > 0) {
-      right_motor.spin(reverse);
-      left_motor.spin(forward);
-    } else {
       right_motor.spin(forward);
       left_motor.spin(reverse);
+    } else {
+      right_motor.spin(reverse);
+      left_motor.spin(forward);
     }
 
     previousHeadingError = headingError;
