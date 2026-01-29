@@ -111,7 +111,7 @@ using namespace vex;
 // Global Variables
 bool autonomousRunning = false;
 
-const double kAngleToleranceDeg = 1.0; // acceptable error band
+const float kAngleToleranceDeg = 1.0; // acceptable error band
 
 
 float straightProportionalGain, straightDerivativeGain;
@@ -140,7 +140,7 @@ void driveStraightWithRamp(double minimumSpeed, double targetDistanceDegrees, do
 // Defined functions
 void pivotRightToAngle(double targetAngle)
 {
-  double headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0, previousHeadingError = 0.0;
 
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)  
   {
@@ -168,7 +168,7 @@ void pivotRightToAngle(double targetAngle)
 
 void pivotLeftToAngle(double targetAngle)
 {
-  double headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0, previousHeadingError = 0.0;
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
   {
     headingError = targetAngle - Gyro8.rotation();
@@ -196,7 +196,7 @@ void pivotLeftToAngle(double targetAngle)
 
 void spinToAngle(double targetAngle)
 {
-  double headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0, previousHeadingError = 0.0;
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
   {
     headingError = targetAngle - Gyro8.rotation();
@@ -230,7 +230,7 @@ void spinToAngle(double targetAngle)
 
 void driveForwardUntilBlack(double driveSpeed, double targetAngle, double minimumDistanceDegrees)
 {
-  double headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0, previousHeadingError = 0.0;
   right_motor.setPosition(0.0, degrees);
   while (!(((static_cast<float>(Color2.brightness()) - blackReferenceValue) * 100.0) / (whiteReferenceValue - blackReferenceValue) < 80.0 && fabs(static_cast<float>(right_motor.position(degrees))) >= minimumDistanceDegrees))
   {
@@ -258,8 +258,11 @@ void driveForwardUntilBlack(double driveSpeed, double targetAngle, double minimu
 
 void driveStraightWithRamp(double minimumSpeed, double targetDistanceDegrees, double targetAngle, double maximumSpeed)
 {
+  
+  float headingError = 0.0, previousHeadingError = 0.0;
+
   currentSpeed = minimumSpeed;
-  double headingError = 0.0, previousHeadingError = 0.0;
+  
   right_motor.setPosition(0.0, degrees);
   while (!(fabs(static_cast<float>(right_motor.position(degrees))) >= targetDistanceDegrees * 0.5))
   {
