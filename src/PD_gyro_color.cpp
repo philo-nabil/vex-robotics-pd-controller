@@ -113,13 +113,13 @@ bool autonomousRunning = false;
 
 const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-float straightProportionalGain, straightDerivativeGain;  // <- Modify 
+float straightProportionalGain, straightDerivativeGain; 
 
-float pivotProportionalGain, pivotDerivativeGain;  // <- Modify 
+float pivotProportionalGain, pivotDerivativeGain;  
 
-float spinProportionalGain, spinDerivativeGain;  // <- Modify 
+float spinProportionalGain, spinDerivativeGain;  
 
-float currentSpeed, whiteReferenceValue, blackReferenceValue; // <- Modify 
+float currentSpeed, whiteReferenceValue, blackReferenceValue; 
 
 
 
