@@ -124,20 +124,20 @@ float currentSpeed, whiteReferenceValue, blackReferenceValue;
 
 
 // Functions Prototypes
-void pivotRightToAngle(double targetAngle);
+void pivotRightToAngle(float targetAngle);
 
-void pivotLeftToAngle(double targetAngle);
+void pivotLeftToAngle(float targetAngle);
 
-void spinToAngle(double targetAngle);
+void spinToAngle(float targetAngle);
 
-void driveForwardUntilBlack(double driveSpeed, double targetAngle, double minimumDistanceDegrees);
+void driveForwardUntilBlack(float driveSpeed, float targetAngle, float minimumDistanceDegrees);
 
-void driveStraightWithRamp(double minimumSpeed, double targetDistanceDegrees, double targetAngle, double maximumSpeed);
+void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed);
 
 
 
 // Defined functions
-void pivotRightToAngle(double targetAngle)
+void pivotRightToAngle(float targetAngle)
 {
   float headingError = 0.0, previousHeadingError = 0.0;
 
@@ -165,7 +165,7 @@ void pivotRightToAngle(double targetAngle)
   right_motor.stop(hold);
 }
 
-void pivotLeftToAngle(double targetAngle)
+void pivotLeftToAngle(float targetAngle)
 {
   float headingError = 0.0, previousHeadingError = 0.0;
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
@@ -193,7 +193,7 @@ void pivotLeftToAngle(double targetAngle)
   left_motor.stop(hold);
 }
 
-void spinToAngle(double targetAngle)
+void spinToAngle(float targetAngle)
 {
   float headingError = 0.0, previousHeadingError = 0.0;
   while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
@@ -227,7 +227,7 @@ void spinToAngle(double targetAngle)
   right_motor.stop(hold);
 }
 
-void driveForwardUntilBlack(double driveSpeed, double targetAngle, double minimumDistanceDegrees)
+void driveForwardUntilBlack(float driveSpeed, float targetAngle, float minimumDistanceDegrees)
 {
   float headingError = 0.0, previousHeadingError = 0.0;
   right_motor.setPosition(0.0, degrees);
@@ -255,7 +255,7 @@ void driveForwardUntilBlack(double driveSpeed, double targetAngle, double minimu
   left_motor.stop(hold);
 }
 
-void driveStraightWithRamp(double minimumSpeed, double targetDistanceDegrees, double targetAngle, double maximumSpeed)
+void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
   
   float headingError = 0.0, previousHeadingError = 0.0;
