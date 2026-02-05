@@ -113,14 +113,15 @@ bool autonomousRunning = false;
 
 const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-float straightProportionalGain, straightDerivativeGain; 
+const float straightProportionalGain, straightDerivativeGain; 
 
-float pivotProportionalGain, pivotDerivativeGain;  
+const float pivotProportionalGain, pivotDerivativeGain;  
 
-float spinProportionalGain, spinDerivativeGain;  
+const float spinProportionalGain, spinDerivativeGain;  
 
-float currentSpeed, whiteReferenceValue, blackReferenceValue; 
+const float currentSpeed, whiteReferenceValue, blackReferenceValue; 
 
+const float speedKp, speedKd;
 
 
 // Functions Prototypes
@@ -232,76 +233,79 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-void driveForwardUntilBlack(float driveSpeed, float targetAngle, float minimumDistanceDegrees)
-{
-  float headingError = 0.0, previousHeadingError = 0.0;
-  right_motor.setPosition(0.0, degrees);
-  while (!(((static_cast<float>(Color2.brightness()) - blackReferenceValue) * 100.0) / (whiteReferenceValue - blackReferenceValue) < 80.0 && fabs(static_cast<float>(right_motor.position(degrees))) >= minimumDistanceDegrees))
-  {
-    headingError = targetAngle - Gyro8.rotation();
-    right_motor.setVelocity((driveSpeed + (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    left_motor.setVelocity((driveSpeed - (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    right_motor.spin(forward);
-    left_motor.spin(forward);
-    previousHeadingError = headingError;
-    wait(20, msec);
-  }
-  while (!(((static_cast<float>(Color2.brightness()) - blackReferenceValue) * 100.0) / (whiteReferenceValue - blackReferenceValue) < 40.0 && fabs(static_cast<float>(right_motor.position(degrees))) >= minimumDistanceDegrees))
-  {
-    headingError = targetAngle - Gyro8.rotation();
-    right_motor.setVelocity((driveSpeed * 0.5 + (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    left_motor.setVelocity((driveSpeed * 0.5 - (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    right_motor.spin(forward);
-    left_motor.spin(forward);
-    previousHeadingError = headingError;
-    wait(20, msec);
-  }
-  right_motor.stop(hold);
-  left_motor.stop(hold);
+// Add these helper functions after your global variables, before movement functions
+
+float smoothstep(float x) {
+  if (x <= 0.0) return 0.0;
+  if (x >= 1.0) return 1.0;
+  return x * x * (3.0 - 2.0 * x);
 }
 
-void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
+float clamp(float value, float min, float max) {
+  return fmax(min, fmin(max, value));
+}
+
+// Then use them in your function:
+void driveStraightWithVelocityPID(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
   
   float headingError = 0.0, previousHeadingError = 0.0;
-
-  currentSpeed = minimumSpeed;
+  float speedError = 0.0, previousSpeedError = 0.0;
   
-  right_motor.setPosition(0.0, degrees);
-  while (!(fabs(static_cast<float>(right_motor.position(degrees))) >= targetDistanceDegrees * 0.5))
+
+  
+  right_motor.resetPosition();
+  left_motor.resetPosition();
+  
+  while (true)
   {
-    headingError = targetAngle - Gyro8.rotation();
-    right_motor.setVelocity((currentSpeed + (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    left_motor.setVelocity((currentSpeed - (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    right_motor.spin(forward);
-    left_motor.spin(forward);
-    previousHeadingError = headingError;
-    if (fabs(static_cast<float>(currentSpeed)) < fabs(static_cast<float>(maximumSpeed)))
-    {
-      currentSpeed = currentSpeed * 1.3;
+    // Distance tracking
+    float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
+    
+    if (averageDistance >= targetDistanceDegrees) break;
+    
+    // Target speed from S-curve
+    float progress = averageDistance / targetDistanceDegrees;
+    float speedFactor;
+    if (progress < 0.5) {
+      speedFactor = smoothstep(progress * 2.0);
+    } else {
+      speedFactor = smoothstep((1.0 - progress) * 2.0);
     }
+    float targetSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * speedFactor;
+    
+    // Actual speed from motor velocity sensor (built-in!)
+    float actualSpeed = (right_motor.velocity(percent) + left_motor.velocity(percent)) / 2.0;
+    
+    // Speed PID
+    speedError = targetSpeed - actualSpeed;
+    float speedCorrection = speedError * speedKp + 
+                            speedKd * (speedError - previousSpeedError);
+    previousSpeedError = speedError;
+    
+    float baseSpeed = targetSpeed + speedCorrection;
+    
+    // Heading PID
+    headingError = targetAngle - Gyro8.rotation();
+    float headingCorrection = headingError * straightProportionalGain + 
+                              straightDerivativeGain * (headingError - previousHeadingError);
+    previousHeadingError = headingError;
+    
+    // Combine
+    float rightVel = fmax(-100.0, fmin(100.0, baseSpeed + headingCorrection));
+    float leftVel = fmax(-100.0, fmin(100.0, baseSpeed - headingCorrection));
+    
+    right_motor.setVelocity(fabs(rightVel), percent);
+    left_motor.setVelocity(fabs(leftVel), percent);
+    right_motor.spin(rightVel > 0 ? forward : reverse);
+    left_motor.spin(leftVel > 0 ? forward : reverse);
+    
     wait(20, msec);
   }
-  while (!(fabs(static_cast<float>(right_motor.position(degrees))) >= targetDistanceDegrees))
-  {
-    if (fabs(static_cast<float>(currentSpeed)) > fabs(static_cast<float>(minimumSpeed)))
-    {
-      currentSpeed = currentSpeed * 0.875;
-    }
-    headingError = targetAngle - Gyro8.rotation();
-    right_motor.setVelocity((currentSpeed + (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    left_motor.setVelocity((currentSpeed - (headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError))), percent);
-    right_motor.spin(forward);
-    left_motor.spin(forward);
-    previousHeadingError = headingError;
-    wait(20, msec);
-  }
+  
   right_motor.stop(hold);
   left_motor.stop(hold);
-
 }
-
-// "when started" hat block
 /*int configureRobot()
 {
   C.setColor(red);
