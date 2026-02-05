@@ -131,8 +131,6 @@ void pivotLeftToAngle(float targetAngle);
 
 void spinToAngle(float targetAngle);
 
-void driveForwardUntilBlack(float driveSpeed, float targetAngle, float minimumDistanceDegrees);
-
 void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed);
 
 
@@ -246,7 +244,7 @@ float clamp(float value, float min, float max) {
 }
 
 // Then use them in your function:
-void driveStraightWithVelocityPID(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
+void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
   
   float headingError = 0.0, previousHeadingError = 0.0;
