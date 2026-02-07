@@ -25,16 +25,15 @@ brain Brain;
 // END IQ MACROS
 
 // Robot configuration code.
-gyro Gyro8 = gyro(PORT8);
-motor right_motor = motor(PORT1, true);
+gyro Gyro8 = gyro(PORT2);
+motor right_motor = motor(PORT8, false);
 motor left_motor = motor(PORT7, false);
-touchled C = touchled(PORT6);
-touchled B = touchled(PORT12);
-motor ArmMotorA = motor(PORT5, false);
-motor ArmMotorB = motor(PORT11, true);
+// touchled C = touchled(PORT6);
+// touchled B = touchled(PORT12);
+motor ArmMotorA = motor(PORT9, false);
+motor ArmMotorB = motor(PORT10, false);
 motor_group four_bar = motor_group(ArmMotorA, ArmMotorB);
-
-colorsensor Color2 = colorsensor(PORT2);
+motor M_180(PORT1,false);
 
 // generating and setting random seed
 void initializeRandomSeed()
@@ -113,11 +112,17 @@ bool autonomousRunning = false;
 
 const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-const float straightProportionalGain, straightDerivativeGain; 
+const float straightProportionalGain;
 
-const float pivotProportionalGain, pivotDerivativeGain;  
+const float straightDerivativeGain; 
 
-const float spinProportionalGain, spinDerivativeGain;  
+const float pivotProportionalGain;
+
+const float pivotDerivativeGain;  
+
+const float spinProportionalGain;
+
+const float spinDerivativeGain;  
 
 const float currentSpeed, whiteReferenceValue, blackReferenceValue; 
 
@@ -142,9 +147,9 @@ void pivotRightToAngle(float targetAngle)
   
   float headingError = 0.0, previousHeadingError = 0.0;
 
-  while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)  
+  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)  
   {
-    headingError = targetAngle - Gyro8.rotation();
+    headingError = targetAngle - Gyro8.heading();
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
 
@@ -167,14 +172,15 @@ void pivotRightToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
+
 void pivotLeftToAngle(float targetAngle)
 {
   left_motor.stop(hold);
 
   float headingError = 0.0, previousHeadingError = 0.0;
-  while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
+  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)
   {
-    headingError = targetAngle - Gyro8.rotation();
+    headingError = targetAngle - Gyro8.heading();
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
 
@@ -199,10 +205,14 @@ void pivotLeftToAngle(float targetAngle)
 
 void spinToAngle(float targetAngle)
 {
+  right_motor.setStopping(hold);
+  left_motor.setStopping(hold);
+  right_motor.stop();
+  left_motor.stop();
   float headingError = 0.0, previousHeadingError = 0.0;
-  while (fabs(Gyro8.rotation() - targetAngle) > kAngleToleranceDeg)
+  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)
   {
-    headingError = targetAngle - Gyro8.rotation();
+    headingError = targetAngle - Gyro8.heading();
 
     // Normalize to shortest path (-180 to +180)
     if(headingError > 180.0) headingError -= 360.0;
@@ -231,7 +241,6 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-// Add these helper functions after your global variables, before movement functions
 
 float smoothstep(float x) {
   if (x <= 0.0) return 0.0;
@@ -243,55 +252,49 @@ float clamp(float value, float min, float max) {
   return fmax(min, fmin(max, value));
 }
 
-// Then use them in your function:
 void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
-  
+  float currentSpeed = minimumSpeed;
   float headingError = 0.0, previousHeadingError = 0.0;
-  float speedError = 0.0, previousSpeedError = 0.0;
-  
-
   
   right_motor.resetPosition();
   left_motor.resetPosition();
   
   while (true)
   {
-    // Distance tracking
     float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
     
     if (averageDistance >= targetDistanceDegrees) break;
     
-    // Target speed from S-curve
+    // Simple linear ramp
     float progress = averageDistance / targetDistanceDegrees;
-    float speedFactor;
+    
     if (progress < 0.5) {
-      speedFactor = smoothstep(progress * 2.0);
+      // Accelerate (first half)
+      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * (progress * 2.0);
     } else {
-      speedFactor = smoothstep((1.0 - progress) * 2.0);
+      // Decelerate (second half)
+      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * ((1.0 - progress) * 2.0);
     }
-    float targetSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * speedFactor;
     
-    // Actual speed from motor velocity sensor (built-in!)
-    float actualSpeed = (right_motor.velocity(percent) + left_motor.velocity(percent)) / 2.0;
+    // Heading PD
+    headingError = targetAngle - Gyro8.heading();
+    if (headingError > 180.0) headingError -= 360.0;
+    if (headingError < -180.0) headingError += 360.0;
     
-    // Speed PID
-    speedError = targetSpeed - actualSpeed;
-    float speedCorrection = speedError * speedKp + 
-                            speedKd * (speedError - previousSpeedError);
-    previousSpeedError = speedError;
-    
-    float baseSpeed = targetSpeed + speedCorrection;
-    
-    // Heading PID
-    headingError = targetAngle - Gyro8.rotation();
     float headingCorrection = headingError * straightProportionalGain + 
                               straightDerivativeGain * (headingError - previousHeadingError);
     previousHeadingError = headingError;
     
-    // Combine
-    float rightVel = fmax(-100.0, fmin(100.0, baseSpeed + headingCorrection));
-    float leftVel = fmax(-100.0, fmin(100.0, baseSpeed - headingCorrection));
+    // Apply to motors
+    float rightVel = currentSpeed + headingCorrection;
+    float leftVel = currentSpeed - headingCorrection;
+    
+    // Clamp
+    if (rightVel > 100.0) rightVel = 100.0;
+    if (rightVel < -100.0) rightVel = -100.0;
+    if (leftVel > 100.0) leftVel = 100.0;
+    if (leftVel < -100.0) leftVel = -100.0;
     
     right_motor.setVelocity(fabs(rightVel), percent);
     left_motor.setVelocity(fabs(leftVel), percent);
@@ -304,38 +307,22 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   right_motor.stop(hold);
   left_motor.stop(hold);
 }
-/*int configureRobot()
+int configureRobot()
 {
-  C.setColor(red);
-  B.setColor(red);
 
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
 
-  straightProportionalGain = 0;   // <--- Modify
-  straightDerivativeGain = 0;     // <--- Modify
-
-  pivotProportionalGain = 0;      // <--- Modify
-  pivotDerivativeGain = 0;        // <--- Modify
-
-  spinProportionalGain = 0;       // <--- Modify
-  spinDerivativeGain = 0;         // <--- Modify
-
-  whiteReferenceValue = 0;        // <--- Modify
-  blackReferenceValue = 0;        // <--- Modify
   
-  Color2.setLight(30, percent);   // <--- Modify
   Gyro8.calibrate(calNormal);
   while (Gyro8.isCalibrating())
   {
     wait(20, msec); // let the gyro finish calibrating
   }
   Gyro8.setRotation(0.0, degrees);
-  C.setColor(green);
-  B.setColor(blue);
   return 0;
 }
-*/
+
 
 int main()
 {
