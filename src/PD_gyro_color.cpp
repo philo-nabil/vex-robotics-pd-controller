@@ -241,17 +241,6 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-
-float smoothstep(float x) {
-  if (x <= 0.0) return 0.0;
-  if (x >= 1.0) return 1.0;
-  return x * x * (3.0 - 2.0 * x);
-}
-
-float clamp(float value, float min, float max) {
-  return fmax(min, fmin(max, value));
-}
-
 void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
   float currentSpeed = minimumSpeed;
@@ -282,8 +271,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
     if (headingError > 180.0) headingError -= 360.0;
     if (headingError < -180.0) headingError += 360.0;
     
-    float headingCorrection = headingError * straightProportionalGain + 
-                              straightDerivativeGain * (headingError - previousHeadingError);
+    float headingCorrection = headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError);
     previousHeadingError = headingError;
     
     // Apply to motors
@@ -314,7 +302,7 @@ int configureRobot()
   left_motor.setStopping(hold);
 
   
-  Gyro8.calibrate(calNormal);
+  Gyro8.calibrate(calSlow);
   while (Gyro8.isCalibrating())
   {
     wait(20, msec); // let the gyro finish calibrating
