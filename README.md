@@ -1,11 +1,10 @@
 # VEX IQ Robotics - PD Controller
 
-A proportional-derivative (PD) controller implementation for VEX IQ robotics platform, featuring autonomous navigation with gyroscope-based heading correction and color sensor-based line following.
+A proportional-derivative (PD) controller implementation for VEX IQ robotics platform, featuring autonomous navigation with gyroscope-based heading correction.
 
 ## 🤖 Features
 
 - **PD Control Algorithm**: Smooth, responsive robot movement with heading correction
-- **Autonomous Navigation**: Line following using color sensor
 - **Multiple Motion Modes**:
   - Pivot turns (single wheel rotation)
   - Spin turns (both wheels counter-rotating)
@@ -16,11 +15,10 @@ A proportional-derivative (PD) controller implementation for VEX IQ robotics pla
 
 ### Hardware
 - VEX IQ Brain (1st gen)
-- 2x Drive Motors (Ports 1, 7)
-- 2x Arm Motors (Ports 5, 11)
-- Gyroscope Sensor (Port 8)
-- Color Sensor (Port 2)
-- 2x Touch LED buttons (Ports 6, 12)
+- 2x Drive Motors 
+- 2x Arm Motors 
+- Gyroscope Sensor 
+- 2x Touch LED buttons
 
 ### Control System
 - **Control Loop Frequency**: 50 Hz (20ms period)
@@ -34,7 +32,6 @@ pivotRightToAngle()     // Pivot on right wheel
 pivotLeftToAngle()      // Pivot on left wheel
 spinToAngle()           // Spin in place
 driveStraightWithRamp() // Drive with acceleration/deceleration
-driveForwardUntilBlack() // Line following
 ```
 
 ## 🚀 Getting Started
@@ -48,7 +45,6 @@ driveForwardUntilBlack() // Line following
 ## 🎯 What I Learned
 
 - Implementing PD control algorithms for real-time robotics
-- Sensor fusion (gyroscope + color sensor)
 - Motor control and coordination
 - Timeout protection and error handling
 - Code optimization for embedded systems
