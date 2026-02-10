@@ -2,7 +2,7 @@
 
 A proportional-derivative (PD) controller implementation for VEX IQ robotics platform, featuring autonomous navigation with gyroscope-based heading correction and trapezoidal motion profiling.
 
-## 🤖 Features
+## Features
 
 - **PD Control Algorithm**: Smooth, responsive robot movement with heading correction
 - **Multiple Motion Modes**:
@@ -12,7 +12,7 @@ A proportional-derivative (PD) controller implementation for VEX IQ robotics pla
 - **Advanced Motion Control**: Configurable acceleration/deceleration profiles
 - **Robust Control**: Velocity clamping and angle normalization for reliable operation
 
-## 🛠️ Technical Details
+## Technical Details
 
 ### Hardware Configuration
 
@@ -36,7 +36,7 @@ A proportional-derivative (PD) controller implementation for VEX IQ robotics pla
   - Pivot Turn: Kp = 0.6, Kd = 4.0
   - Spin Turn: Kp = 1.35, Kd = 8.0
 
-## 📋 Core Functions
+## Core Functions
 
 ```cpp
 // Motion control functions
@@ -59,14 +59,14 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees,
   //   - maximumSpeed: Peak speed at midpoint
 ```
 
-## 🎮 Motion Profiling
+## Motion Profiling
 
 The `driveStraightWithRamp()` function implements a **trapezoidal velocity profile**:
 - **First 50%**: Linear acceleration from minimum to maximum speed
 - **Last 50%**: Linear deceleration from maximum to minimum speed
 - **Heading Correction**: PD control maintains straight line throughout
 
-## 🚀 Getting Started
+## Getting Started
 
 1. Open **VEXcode IQ**
 2. Create a new project
@@ -75,7 +75,7 @@ The `driveStraightWithRamp()` function implements a **trapezoidal velocity profi
 5. Download to your VEX IQ robot
 6. Run your program!
 
-## 🧮 How It Works
+## Implementation Details
 
 ### Angle Normalization
 All angular errors are normalized to the range [-180°, +180°] to ensure the robot takes the shortest rotational path.
@@ -92,24 +92,26 @@ velocity = error × Kp + (error - previousError) × Kd
 - Motors use `hold` braking mode for precise positioning
 - Gyroscope calibrates at startup for accurate heading reference
 
-## 🎯 What I Learned
+## Key Learnings
 
-- Implementing PD control algorithms for real-time robotics
-- Trapezoidal motion profiling for smooth acceleration/deceleration
-- Gyroscope sensor integration and angle normalization
+This project provided hands-on experience with:
+
+- Implementing PD control algorithms for real-time robotics applications
+- Trapezoidal motion profiling for smooth acceleration and deceleration
+- Gyroscope sensor integration and angle normalization techniques
 - Motor coordination and differential drive kinematics
-- Embedded systems programming with VEXcode
-- Tuning control gains for stable, responsive movement
+- Embedded systems programming with VEXcode platform
+- Control system gain tuning for stable and responsive movement
 
-## 📝 License
+## License
 
 MIT License - feel free to use this code for learning!
 
-## 🤝 Contributing
+## Contributing
 
-This is a learning project, but suggestions are welcome! Feel free to open an issue or reach out with improvements.
+This is a learning project, but suggestions and improvements are welcome. Feel free to open an issue or submit a pull request.
 
-## 📧 Contact
+## Contact
 
 Philobatir Nabil - philobatir.nabil@proton.me
 
