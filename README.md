@@ -31,10 +31,7 @@ A proportional-derivative (PD) controller implementation for VEX IQ robotics pla
 
 - **Control Loop Frequency**: 50 Hz (20ms update period)
 - **Angle Tolerance**: ±1.0 degree
-- **PD Gains**:
-  - Straight Drive: Kp = 1.5, Kd = 4.0
-  - Pivot Turn: Kp = 0.6, Kd = 4.0
-  - Spin Turn: Kp = 1.35, Kd = 8.0
+
 
 ## 📋 Core Functions
 
