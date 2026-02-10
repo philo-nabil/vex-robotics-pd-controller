@@ -25,7 +25,7 @@ brain Brain;
 // END IQ MACROS
 
 // Robot configuration code.
-gyro Gyro8 = gyro(PORT2);
+gyro Gyro2 = gyro(PORT2);
 motor right_motor = motor(PORT8, false);
 motor left_motor = motor(PORT7, false);
 // touchled C = touchled(PORT6);
@@ -112,19 +112,19 @@ bool autonomousRunning = false;
 
 const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-const float straightProportionalGain;
+const float straightProportionalGain = 1.5;
 
-const float straightDerivativeGain; 
+const float straightDerivativeGain = 4; 
 
-const float pivotProportionalGain;
+const float Kp_PIVOT = 0.6;
 
-const float pivotDerivativeGain;  
+const float Kd_PIVOT = 4;  
 
-const float spinProportionalGain;
+const float Kp_SPIN = 1.35;
 
-const float spinDerivativeGain;  
+const float Kd_SPIN = 8.0;  
 
-const float currentSpeed, whiteReferenceValue, blackReferenceValue; 
+const float currentSpeed; 
 
 const float speedKp, speedKd;
 
@@ -147,13 +147,15 @@ void pivotRightToAngle(float targetAngle)
   
   float headingError = 0.0, previousHeadingError = 0.0;
 
-  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)  
+  while (true)  
   {
-    headingError = targetAngle - Gyro8.heading();
+    headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
-
-    double velocity = headingError * pivotProportionalGain + pivotDerivativeGain * (headingError - previousHeadingError);
+    if (fabs(headingError) <= kAngleToleranceDeg){
+      break;
+    }
+    double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
     
     // Clamp velocity
     if (velocity > 100.0) velocity = 100.0;
@@ -178,13 +180,13 @@ void pivotLeftToAngle(float targetAngle)
   left_motor.stop(hold);
 
   float headingError = 0.0, previousHeadingError = 0.0;
-  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)
+  while (fabs(Gyro2.rotation() - targetAngle) > kAngleToleranceDeg)
   {
-    headingError = targetAngle - Gyro8.heading();
+    headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
 
-    double velocity = headingError * pivotProportionalGain + pivotDerivativeGain * (headingError - previousHeadingError);
+    double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
     
     // Clamp velocity
     if (velocity > 100.0) velocity = 100.0;
@@ -210,15 +212,17 @@ void spinToAngle(float targetAngle)
   right_motor.stop();
   left_motor.stop();
   float headingError = 0.0, previousHeadingError = 0.0;
-  while (fabs(Gyro8.heading() - targetAngle) > kAngleToleranceDeg)
+  while (true)
   {
-    headingError = targetAngle - Gyro8.heading();
+    headingError = targetAngle - Gyro2.rotation();
 
     // Normalize to shortest path (-180 to +180)
     if(headingError > 180.0) headingError -= 360.0;
     if(headingError < -180.0) headingError += 360.0;
-
-    double velocity = headingError * spinProportionalGain + spinDerivativeGain * (headingError - previousHeadingError);
+    if(fabs(headingError)<= kAngleToleranceDeg){
+      break;
+    }
+    double velocity = headingError * Kp_SPIN + Kd_SPIN * (headingError - previousHeadingError);
     // Clamp velocity
     if (velocity > 100.0) velocity = 100.0;
     if (velocity < -100.0) velocity = -100.0;
@@ -253,7 +257,10 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   {
     float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
     
-    if (averageDistance >= targetDistanceDegrees) break;
+    // exit condition
+    if (averageDistance >= targetDistanceDegrees){
+      break;
+    } 
     
     // Simple linear ramp
     float progress = averageDistance / targetDistanceDegrees;
@@ -267,7 +274,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
     }
     
     // Heading PD
-    headingError = targetAngle - Gyro8.heading();
+    headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180.0) headingError -= 360.0;
     if (headingError < -180.0) headingError += 360.0;
     
@@ -295,19 +302,20 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   right_motor.stop(hold);
   left_motor.stop(hold);
 }
+
+
 int configureRobot()
 {
 
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
 
-  
-  Gyro8.calibrate(calSlow);
-  while (Gyro8.isCalibrating())
+  Gyro2.calibrate(calSlow);
+  while (Gyro2.isCalibrating())
   {
     wait(20, msec); // let the gyro finish calibrating
   }
-  Gyro8.setRotation(0.0, degrees);
+  Gyro2.setRotation(0.0, degrees);
   return 0;
 }
 
@@ -316,7 +324,7 @@ int main()
 {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
-  
+  configureRobot();
 
 
   wait(15, msec);
