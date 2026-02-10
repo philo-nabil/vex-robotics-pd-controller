@@ -112,9 +112,9 @@ bool autonomousRunning = false;
 
 const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-const float straightProportionalGain = 1.5;
+const float Kp_straight = 1.5;
 
-const float straightDerivativeGain = 4; 
+const float Kd_straight = 4; 
 
 const float Kp_PIVOT = 0.6;
 
@@ -278,7 +278,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
     if (headingError > 180.0) headingError -= 360.0;
     if (headingError < -180.0) headingError += 360.0;
     
-    float headingCorrection = headingError * straightProportionalGain + straightDerivativeGain * (headingError - previousHeadingError);
+    float headingCorrection = headingError * Kp_straight + Kd_straight * (headingError - previousHeadingError);
     previousHeadingError = headingError;
     
     // Apply to motors
