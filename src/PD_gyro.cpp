@@ -28,12 +28,12 @@ brain Brain;
 gyro Gyro2 = gyro(PORT2);
 motor right_motor = motor(PORT8, false);
 motor left_motor = motor(PORT7, false);
-// touchled C = touchled(PORT6);
-// touchled B = touchled(PORT12);
+touchled TouchLED3 = touchled(PORT3);
 motor ArmMotorA = motor(PORT9, false);
 motor ArmMotorB = motor(PORT10, false);
 motor_group four_bar = motor_group(ArmMotorA, ArmMotorB);
 motor M_180(PORT1,false);
+motor Kamasha = motor(PORT4, false);
 
 // generating and setting random seed
 void initializeRandomSeed()
@@ -110,24 +110,21 @@ using namespace vex;
 // Global Variables
 bool autonomousRunning = false;
 
-const float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
+float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-const float Kp_straight = 1.5;
+float Kp_straight = 1.5;
 
-const float Kd_straight = 4; 
+float Kd_straight = 4; 
 
-const float Kp_PIVOT = 0.6;
+float Kp_PIVOT = 0.6;
 
-const float Kd_PIVOT = 4;  
+float Kd_PIVOT = 4;  
 
-const float Kp_SPIN = 1.35;
+float Kp_SPIN = 1.35;
 
-const float Kd_SPIN = 8.0;  
+float Kd_SPIN = 8.0;  
 
-const float currentSpeed; 
-
-const float speedKp, speedKd;
-
+float currentSpeed; 
 
 // Functions Prototypes
 void pivotRightToAngle(float targetAngle);
@@ -257,23 +254,24 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   {
     float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
     
-    // exit condition
-    if (averageDistance >= targetDistanceDegrees){
+    // Exit condition
+    if (averageDistance >= targetDistanceDegrees) {
       break;
     } 
     
-    // Simple linear ramp
+    // S-curve ramp (smoothstep)
     float progress = averageDistance / targetDistanceDegrees;
+    float smoothProgress = progress * progress * (3.0 - 2.0 * progress);
     
-    if (progress < 0.5) {
-      // Accelerate (first half)
-      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * (progress * 2.0);
+    if (smoothProgress < 0.5) {
+      // Accelerate (first half) - smooth ease in
+      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * (smoothProgress * 2.0);
     } else {
-      // Decelerate (second half)
-      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * ((1.0 - progress) * 2.0);
+      // Decelerate (second half) - smooth ease out
+      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * ((1.0 - smoothProgress) * 2.0);
     }
     
-    // Heading PD
+    // Heading PD correction
     headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180.0) headingError -= 360.0;
     if (headingError < -180.0) headingError += 360.0;
@@ -281,16 +279,17 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
     float headingCorrection = headingError * Kp_straight + Kd_straight * (headingError - previousHeadingError);
     previousHeadingError = headingError;
     
-    // Apply to motors
+    // Apply correction to motors
     float rightVel = currentSpeed + headingCorrection;
     float leftVel = currentSpeed - headingCorrection;
     
-    // Clamp
+    // Clamp velocities
     if (rightVel > 100.0) rightVel = 100.0;
     if (rightVel < -100.0) rightVel = -100.0;
     if (leftVel > 100.0) leftVel = 100.0;
     if (leftVel < -100.0) leftVel = -100.0;
     
+    // Set motor velocities and directions
     right_motor.setVelocity(fabs(rightVel), percent);
     left_motor.setVelocity(fabs(leftVel), percent);
     right_motor.spin(rightVel > 0 ? forward : reverse);
@@ -303,9 +302,20 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   left_motor.stop(hold);
 }
 
-
 int configureRobot()
 {
+
+  TouchLED3.setColor(red);
+  right_motor.setStopping(hold);
+  left_motor.setStopping(hold);
+  four_bar.setStopping(hold);
+  Kamasha.setStopping(hold);
+  M_180.setStopping(hold);
+  right_motor.setVelocity(100.0, percent);
+  left_motor.setVelocity(100.0, percent);
+  four_bar.setMaxTorque(100.0, percent);
+  M_180.setVelocity(100.0, percent);
+  Kamasha.setVelocity(100.0, percent);
 
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
@@ -316,16 +326,26 @@ int configureRobot()
     wait(20, msec); // let the gyro finish calibrating
   }
   Gyro2.setRotation(0.0, degrees);
+  TouchLED3.setColor(green);
+
   return 0;
 }
 
+void route(){
+
+
+
+
+
+
+}
 
 int main()
 {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   configureRobot();
-
+  TouchLED3.pressed(route);
 
   wait(15, msec);
 }
