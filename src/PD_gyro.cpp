@@ -245,7 +245,7 @@ void spinToAngle(float targetAngle)
 void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
 {
   float currentSpeed = minimumSpeed;
-  float headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0, previousHeadingError = targetAngle - Gyro2.rotation();
   
   right_motor.resetPosition();
   left_motor.resetPosition();
