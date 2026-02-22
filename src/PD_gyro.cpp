@@ -27,7 +27,7 @@ brain Brain;
 // Robot configuration code.
 gyro Gyro2 = gyro(PORT2);
 motor right_motor = motor(PORT8, false);
-motor left_motor = motor(PORT7, false);
+motor left_motor = motor(PORT7, true);
 touchled TouchLED3 = touchled(PORT3);
 motor ArmMotorA = motor(PORT9, false);
 motor ArmMotorB = motor(PORT10, false);
@@ -132,8 +132,7 @@ void pivotLeftToAngle(float targetAngle);
 
 void spinToAngle(float targetAngle);
 
-void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed);
-
+void driveStraight(float speed, float targetDistanceDegrees, float targetAngle);
 
 
 // Defined functions
@@ -243,7 +242,7 @@ void spinToAngle(float targetAngle)
   right_motor.stop();
   left_motor.stop();
   float headingError = 0.0, previousHeadingError = 0.0;
-  int settledCount;
+  int settledCount = 0;
 
   previousHeadingError = targetAngle - Gyro2.rotation();
   if (previousHeadingError > 180) previousHeadingError -= 360;
@@ -287,11 +286,20 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, float targetAngle, float maximumSpeed)
+void driveStraight(float speed, float targetDistanceDegrees, float targetAngle)
 {
-  float currentSpeed = minimumSpeed;
-  float headingError = 0.0, previousHeadingError = targetAngle - Gyro2.rotation();
+  right_motor.setStopping(hold);
+  left_motor.setStopping(hold);
+  right_motor.stop();
+  left_motor.stop();
+
+  float headingError = 0.0, previousHeadingError = 0.0;
+  int settledCount = 0;
   
+  previousHeadingError = targetAngle - Gyro2.rotation();
+  if (previousHeadingError > 180) previousHeadingError -= 360;
+  if (previousHeadingError < -180) previousHeadingError += 360;
+
   right_motor.resetPosition();
   left_motor.resetPosition();
   
@@ -299,22 +307,7 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
   {
     float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
     
-    // Exit condition
-    if (averageDistance >= targetDistanceDegrees) {
-      break;
-    } 
     
-    // S-curve ramp (smoothstep)
-    float progress = averageDistance / targetDistanceDegrees;
-    float smoothProgress = progress * progress * (3.0 - 2.0 * progress);
-    
-    if (smoothProgress < 0.5) {
-      // Accelerate (first half) - smooth ease in
-      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * (smoothProgress * 2.0);
-    } else {
-      // Decelerate (second half) - smooth ease out
-      currentSpeed = minimumSpeed + (maximumSpeed - minimumSpeed) * ((1.0 - smoothProgress) * 2.0);
-    }
     
     // Heading PD correction
     headingError = targetAngle - Gyro2.rotation();
@@ -322,31 +315,34 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
     if (headingError < -180.0) headingError += 360.0;
     
     float headingCorrection = headingError * Kp_straight + Kd_straight * (headingError - previousHeadingError);
-    previousHeadingError = headingError;
     
-    // Apply correction to motors
-    float rightVel = currentSpeed + headingCorrection;
-    float leftVel = currentSpeed - headingCorrection;
     
-    // Clamp velocities
+    float rightVel = speed + headingCorrection;
+    float leftVel = speed - headingCorrection;
+    
     if (rightVel > 100.0) rightVel = 100.0;
     if (rightVel < -100.0) rightVel = -100.0;
     if (leftVel > 100.0) leftVel = 100.0;
     if (leftVel < -100.0) leftVel = -100.0;
     
-    // Set motor velocities and directions
     right_motor.setVelocity(fabs(rightVel), percent);
     left_motor.setVelocity(fabs(leftVel), percent);
     right_motor.spin(rightVel > 0 ? forward : reverse);
     left_motor.spin(leftVel > 0 ? forward : reverse);
-    
+
+    if (averageDistance >= targetDistanceDegrees) {
+      settledCount++;
+      if (settledCount > 5) break;
+    } else {
+      settledCount = 0;
+    }
+    previousHeadingError = headingError;
     wait(20, msec);
   }
   
   right_motor.stop(hold);
   left_motor.stop(hold);
 }
-
 int configureRobot()
 {
 
