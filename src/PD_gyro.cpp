@@ -124,7 +124,6 @@ float Kp_SPIN = 1.35;
 
 float Kd_SPIN = 8.0;  
 
-float currentSpeed; 
 
 // Functions Prototypes
 void pivotRightToAngle(float targetAngle);
@@ -140,18 +139,26 @@ void driveStraightWithRamp(float minimumSpeed, float targetDistanceDegrees, floa
 // Defined functions
 void pivotRightToAngle(float targetAngle)
 {
-  right_motor.stop(hold);
+  right_motor.setStopping(hold);
+  left_motor.setStopping(hold);
+  right_motor.stop();
+  left_motor.stop();
   
-  float headingError = 0.0, previousHeadingError = 0.0;
+  float headingError = 0.0;
+  float previousHeadingError = 0.0;
+  int settledCount = 0;
 
+  previousHeadingError = targetAngle - Gyro2.rotation();
+  if (previousHeadingError > 180) previousHeadingError -= 360;
+  if (previousHeadingError < -180) previousHeadingError += 360;
+  
+ 
   while (true)  
   {
     headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180) headingError -= 360;
     if (headingError < -180) headingError += 360;
-    if (fabs(headingError) <= kAngleToleranceDeg){
-      break;
-    }
+    
     double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
     
     // Clamp velocity
@@ -160,24 +167,43 @@ void pivotRightToAngle(float targetAngle)
 
     left_motor.setVelocity(fabs(velocity), percent);
     if (velocity > 0) {
-      left_motor.spin(forward);
-    } else {
       left_motor.spin(reverse);
+    } else {
+      left_motor.spin(forward);
+    }
+
+    if (fabs(headingError) <= kAngleToleranceDeg){
+      settledCount++;
+      if(settledCount > 5){
+        break;
+      }
+      else{
+        settledCount = 0;
+      }
     }
     previousHeadingError = headingError;
     wait(20, msec);
   }
-  left_motor.stop(hold);
-  right_motor.stop(hold);
+  left_motor.stop();
+  right_motor.stop();
 }
 
 
 void pivotLeftToAngle(float targetAngle)
 {
-  left_motor.stop(hold);
+  left_motor.setStopping(hold);
+  right_motor.setStopping(hold);
+  left_motor.stop();
+  right_motor.stop();
 
   float headingError = 0.0, previousHeadingError = 0.0;
-  while (fabs(Gyro2.rotation() - targetAngle) > kAngleToleranceDeg)
+  int settledCount = 0;
+
+  previousHeadingError = targetAngle - Gyro2.rotation();
+  if (previousHeadingError > 180) previousHeadingError -= 360;
+  if (previousHeadingError < -180) previousHeadingError += 360;
+
+  while (true)
   {
     headingError = targetAngle - Gyro2.rotation();
     if (headingError > 180) headingError -= 360;
@@ -195,11 +221,21 @@ void pivotLeftToAngle(float targetAngle)
     } else {
       right_motor.spin(reverse);
     }
+
+    if (fabs(headingError) <= kAngleToleranceDeg){
+      settledCount++;
+      if(settledCount > 5){
+        break;
+      }
+      else{
+        settledCount = 0;
+      }
+    }
     previousHeadingError = headingError;
     wait(20, msec);
   }
-  right_motor.stop(hold);
-  left_motor.stop(hold);
+  right_motor.stop();
+  left_motor.stop();
 }
 
 void spinToAngle(float targetAngle)
@@ -209,6 +245,12 @@ void spinToAngle(float targetAngle)
   right_motor.stop();
   left_motor.stop();
   float headingError = 0.0, previousHeadingError = 0.0;
+  int settledCount;
+
+  previousHeadingError = targetAngle - Gyro2.rotation();
+  if (previousHeadingError > 180) previousHeadingError -= 360;
+  if (previousHeadingError < -180) previousHeadingError += 360;
+
   while (true)
   {
     headingError = targetAngle - Gyro2.rotation();
@@ -216,9 +258,7 @@ void spinToAngle(float targetAngle)
     // Normalize to shortest path (-180 to +180)
     if(headingError > 180.0) headingError -= 360.0;
     if(headingError < -180.0) headingError += 360.0;
-    if(fabs(headingError)<= kAngleToleranceDeg){
-      break;
-    }
+    
     double velocity = headingError * Kp_SPIN + Kd_SPIN * (headingError - previousHeadingError);
     // Clamp velocity
     if (velocity > 100.0) velocity = 100.0;
@@ -234,7 +274,14 @@ void spinToAngle(float targetAngle)
       right_motor.spin(reverse);
       left_motor.spin(forward);
     }
-
+    if(fabs(headingError) <= kAngleToleranceDeg){
+      settledCount++;
+      if (settledCount >= 5) {
+        break;
+      }
+    } else {
+      settledCount = 0;
+    }
     previousHeadingError = headingError;
     wait(20, msec);
   }
