@@ -172,14 +172,13 @@ void pivotRightToAngle(float targetAngle)
       left_motor.spin(forward);
     }
 
-    if (fabs(headingError) <= kAngleToleranceDeg){
+    if (fabs(headingError) <= kAngleToleranceDeg) {
       settledCount++;
-      if(settledCount > 5){
+      if (settledCount > 5) {
         break;
       }
-      else{
-        settledCount = 0;
-      }
+    } else {
+      settledCount = 0;
     }
     previousHeadingError = headingError;
     wait(20, msec);
@@ -222,14 +221,13 @@ void pivotLeftToAngle(float targetAngle)
       right_motor.spin(reverse);
     }
 
-    if (fabs(headingError) <= kAngleToleranceDeg){
+    if (fabs(headingError) <= kAngleToleranceDeg) {
       settledCount++;
-      if(settledCount > 5){
+      if (settledCount > 5) {
         break;
       }
-      else{
-        settledCount = 0;
-      }
+    } else {
+      settledCount = 0;
     }
     previousHeadingError = headingError;
     wait(20, msec);
@@ -274,9 +272,9 @@ void spinToAngle(float targetAngle)
       right_motor.spin(reverse);
       left_motor.spin(forward);
     }
-    if(fabs(headingError) <= kAngleToleranceDeg){
+    if (fabs(headingError) <= kAngleToleranceDeg) {
       settledCount++;
-      if (settledCount >= 5) {
+      if (settledCount > 5) {
         break;
       }
     } else {
