@@ -1,5 +1,4 @@
 # VEX IQ Robotics — PD Controller
-### by Philo | M&P Robotics
 
 Hey! I'm Philo, and this is the code I built for **M&P Robotix**.
 
@@ -165,5 +164,3 @@ This is a learning project, but improvements are always welcome. Feel free to op
 **Philobatir Nabil** — philobatir.nabil@proton.me
 
 ---
-
-> **Note:** The codebase includes motor group definitions and color conversion utilities that can be extended for full competition use.
