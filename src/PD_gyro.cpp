@@ -296,16 +296,18 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle, int settleTimeMs = 150, int timeoutMs = 3000)
+void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle,
+                   int settleTimeMs = 150, int timeoutMs = 3000)
 {
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   right_motor.resetPosition();
   left_motor.resetPosition();
 
-  float correctionSign = (velocity >= 0) ? 1.0 : -1.0;
-  float actualTarget   = correctionSign * fabs(targetDistanceDegrees);
-  float MAX_DRIVE      = fabs(velocity);
+  // Direction from velocity, distance always positive
+  float directionSign = (velocity >= 0) ? 1.0 : -1.0;
+  float actualTarget  = directionSign * fabs(targetDistanceDegrees);
+  float MAX_DRIVE     = fabs(velocity);
 
   float distError     = 0.0;
   float prevDistError = 0.0;
@@ -317,8 +319,8 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
   const float SETTLE_THRESHOLD = 2.0;
   const float INTEGRAL_LIMIT   = 25.0;
 
-  int settleTimer  = 0;  // ms spent within threshold
-  int elapsedTimer = 0;  // ms spent total
+  int settleTimer  = 0;
+  int elapsedTimer = 0;
 
   while (true)
   {
@@ -347,6 +349,9 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
 
     prevHeadingError = headingError;
 
+    // Recalculate every loop — flips correctly during overshoot
+    float correctionSign = (distOutput >= 0) ? 1.0 : -1.0;
+
     // Combine
     float rightVel = distOutput + headingCorrection * correctionSign;
     float leftVel  = distOutput - headingCorrection * correctionSign;
@@ -364,14 +369,14 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
     // Settle check
     if (fabs(distError) < SETTLE_THRESHOLD) {
       settleTimer += 20;
-      if (settleTimer >= settleTimeMs) break;  // settled long enough
+      if (settleTimer >= settleTimeMs) break;
     } else {
-      settleTimer = 0;  // reset if it wobbles out of threshold
+      settleTimer = 0;
     }
 
     // Timeout check
     elapsedTimer += 20;
-    if (elapsedTimer >= timeoutMs) break;  // took too long, move on
+    if (elapsedTimer >= timeoutMs) break;
 
     wait(20, msec);
   }
