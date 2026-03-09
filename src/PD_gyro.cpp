@@ -15,15 +15,15 @@ brain Brain;
 
 
 // Robot configuration code.
-gyro Gyro2 = gyro(PORT2);
-motor right_motor = motor(PORT8, false);
-motor left_motor = motor(PORT7, true);
-touchled TouchLED3 = touchled(PORT3);
-motor ArmMotorA = motor(PORT9, false);
-motor ArmMotorB = motor(PORT10, false);
-motor_group four_bar = motor_group(ArmMotorA, ArmMotorB);
-motor M_180(PORT1,false);
-motor Kamasha = motor(PORT4, false);
+gyro        Gyro2       = gyro(PORT2);
+motor       right_motor = motor(PORT8, false);
+motor       left_motor  = motor(PORT7, true);
+touchled    TouchLED3   = touchled(PORT3);
+motor       ArmMotorA   = motor(PORT9, false);
+motor       ArmMotorB   = motor(PORT10,false);
+motor_group four_bar    = motor_group(ArmMotorA, ArmMotorB);
+motor       M_180       = motor (PORT1,false);
+motor       Kamasha     = motor(PORT4, false);
 
 // generating and setting random seed
 void initializeRandomSeed()
