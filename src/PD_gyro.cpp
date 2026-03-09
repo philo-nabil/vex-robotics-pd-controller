@@ -1,11 +1,9 @@
 #pragma region VEXcode Generated Robot Configuration
-// Make sure all required headers are included.
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
 #include <string.h>
-
 #include "vex.h"
 
 using namespace vex;
@@ -13,168 +11,169 @@ using namespace vex;
 // Brain should be defined by default
 brain Brain;
 
+// START IQ MACROS
+#define waitUntil(condition) \
+  do                         \
+  {                          \
+    wait(5, msec);           \
+  } while (!(condition))
+
+#define repeat(iterations) \
+  for (int iterator = 0; iterator < iterations; iterator++)
+// END IQ MACROS
 
 // Robot configuration code.
 gyro        Gyro2       = gyro(PORT2);
 motor       right_motor = motor(PORT8, false);
-motor       left_motor  = motor(PORT7, true);
+motor       left_motor  = motor(PORT7, true);   // inverted — left side faces opposite direction
 touchled    TouchLED3   = touchled(PORT3);
 motor       ArmMotorA   = motor(PORT9, false);
-motor       ArmMotorB   = motor(PORT10,false);
+motor       ArmMotorB   = motor(PORT10, false);
 motor_group four_bar    = motor_group(ArmMotorA, ArmMotorB);
-motor       M_180       = motor (PORT1,false);
+motor       M_180       = motor(PORT1, false);
 motor       Kamasha     = motor(PORT4, false);
 
-// generating and setting random seed
-void initializeRandomSeed()
-{
+// Seeds the RNG using brain uptime for entropy
+// NOTE: Brain.Timer.system() unit is unconfirmed — verify before removing * 1000
+void initializeRandomSeed() {
   wait(100, msec);
-  double BrainTime = Brain.Timer.system() * 1000;
-  double BrainVoltage = Brain.Battery.voltage();
-  // Combine these values into a single integer
-  int seed = int(
-      BrainTime + BrainVoltage);
-  // Set the seed
-  srand(seed);
+  srand((unsigned int)(Brain.Timer.system() * 1000));
 }
 
-// Convert colorType to string
-const char *convertColorToString(colorType col)
-{
-  if (col == colorType::red)
-    return "red";
-  else if (col == colorType::green)
-    return "green";
-  else if (col == colorType::blue)
-    return "blue";
-  else if (col == colorType::white)
-    return "white";
-  else if (col == colorType::yellow)
-    return "yellow";
-  else if (col == colorType::orange)
-    return "orange";
-  else if (col == colorType::purple)
-    return "purple";
-  else if (col == colorType::cyan)
-    return "cyan";
-  else if (col == colorType::black)
-    return "black";
-  else if (col == colorType::transparent)
-    return "transparent";
-  else if (col == colorType::red_violet)
-    return "red_violet";
-  else if (col == colorType::violet)
-    return "violet";
-  else if (col == colorType::blue_violet)
-    return "blue_violet";
-  else if (col == colorType::blue_green)
-    return "blue_green";
-  else if (col == colorType::yellow_green)
-    return "yellow_green";
-  else if (col == colorType::yellow_orange)
-    return "yellow_orange";
-  else if (col == colorType::red_orange)
-    return "red_orange";
-  else if (col == colorType::none)
-    return "none";
-  else
-    return "unknown";
-}
-
-void vexcodeInit()
-{
-
-  // Initializing random seed.
+void vexcodeInit() {
   initializeRandomSeed();
 }
 
 #pragma endregion VEXcode Generated Robot Configuration
 
-
-// Allows for easier use of the VEX Library
 using namespace vex;
 
+// ── State Machine ─────────────────────────────────────────────────────────────
+typedef enum {
+  STATE_IDLE,
+  STATE_CALIBRATING,
+  STATE_READY,
+  STATE_DRIVING,
+  STATE_TURNING,
+  STATE_ROUTE_DONE,
+  STATE_ERROR
+} RobotState;
 
-// Global Variables
+RobotState currentState = STATE_IDLE;
 
+const char* stateToString(RobotState s) {
+  switch(s) {
+    case STATE_IDLE:        return "IDLE";
+    case STATE_CALIBRATING: return "CALIBRATING";
+    case STATE_READY:       return "READY";
+    case STATE_DRIVING:     return "DRIVING";
+    case STATE_TURNING:     return "TURNING";
+    case STATE_ROUTE_DONE:  return "DONE";
+    case STATE_ERROR:       return "ERROR";
+    default:                return "UNKNOWN";
+  }
+}
+
+// Updates the state and immediately prints it to the brain screen for debugging
+void setState(RobotState newState) {
+  currentState = newState;
+  Brain.Screen.clearScreen();
+  Brain.Screen.printAt(5, 60, stateToString(newState));
+}
+
+// ── Adaptive Config ───────────────────────────────────────────────────────────
+// Holds all tuning constants as one swappable block.
+// Call selectConfig() at the start of configureRobot() to pick a preset.
+typedef struct {
+  float Kp_straight, Kd_straight;
+  float Kp_dist, Ki_dist, Kd_dist;
+  float Kp_PIVOT, Kd_PIVOT;
+  float Kp_SPIN,  Kd_SPIN;
+} RobotConfig;
+
+// TODO: tune the weighted presets on the actual robot before competition
+const RobotConfig CONFIG_NO_WEIGHT = { 1.5f, 4.0f,  0.5f, 0.0f, 0.2f,  0.6f, 4.0f,  1.35f, 8.0f  };
+const RobotConfig CONFIG_2_WEIGHTS = { 1.3f, 4.5f,  0.4f, 0.0f, 0.3f,  0.5f, 4.5f,  1.20f, 9.0f  };
+const RobotConfig CONFIG_4_WEIGHTS = { 1.1f, 5.0f,  0.3f, 0.0f, 0.4f,  0.4f, 5.0f,  1.00f, 10.0f };
+
+RobotConfig cfg; // active config — all functions read gains from here
+
+void selectConfig(const RobotConfig* preset) {
+  cfg = *preset;
+}
+
+// ── Global Variables ──────────────────────────────────────────────────────────
 float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
-float Kp_straight = 1.5;
+// ── Function Prototypes ───────────────────────────────────────────────────────
+void pivotRightToAngle(float targetAngle, int timeoutMs = 3000);
+void pivotLeftToAngle(float targetAngle, int timeoutMs = 3000);
+void spinToAngle(float targetAngle, int timeoutMs = 3000);
+void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle, int timeoutMs = 3000);
 
-float Kd_straight = 4; 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-float Kp_dist;
-
-float Ki_dist;
-
-float Kd_dist;
-
-float Kp_PIVOT = 0.6;
-
-float Kd_PIVOT = 4;  
-
-float Kp_SPIN = 1.35;
-
-float Kd_SPIN = 8.0;  
-
-
-// Functions Prototypes
-void pivotRightToAngle(float targetAngle);
-
-void pivotLeftToAngle(float targetAngle);
-
-void spinToAngle(float targetAngle);
-
-void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle, int settleTimeMs = 150, int timeoutMs = 3000);
-
+// Wraps any angle into [-180, +180] so PD controllers always take the shortest path
 float normalizeAngle(float angle) {
   if (angle >  180.0) angle -= 360.0;
   if (angle < -180.0) angle += 360.0;
   return angle;
 }
 
-// Defined functions
-void pivotRightToAngle(float targetAngle)
-{
+// Symmetric clamp: keeps v inside [-limit, +limit]
+static inline float clamp(float v, float limit) {
+  if (v >  limit) return  limit;
+  if (v < -limit) return -limit;
+  return v;
+}
+
+// ── Pivot (one wheel only) ────────────────────────────────────────────────────
+// Rotates around the stopped wheel.
+//   useLeft : true  = left motor spins  (robot pivots right)
+//             false = right motor spins (robot pivots left)
+//   spinDir : +1 = spin forward when error > 0
+//             -1 = spin reverse when error > 0
+// Both wrappers below call this so the PD logic is only written once.
+void pivotToAngle(float targetAngle, bool useLeft, int spinDir, int timeoutMs = 3000) {
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   right_motor.stop();
   left_motor.stop();
-  
-  float headingError = 0.0;
-  float previousHeadingError = 0.0;
-  int settledCount = 0;
 
-  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+  float headingError         = 0.0;
+  float previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+  int   settledCount         = 0;  // consecutive loops within tolerance
+  int   elapsedTimer         = 0;
 
-  
- 
-  while (true)  
-  {
+  while (true) {
     headingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
-    
-    double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
-    
-    // Clamp velocity
-    if (velocity > 100.0) velocity = 100.0;
-    if (velocity < -100.0) velocity = -100.0;
+    // PD output — derivative term dampens overshoot
+    double velocity = clamp(
+      headingError * cfg.Kp_PIVOT + cfg.Kd_PIVOT * (headingError - previousHeadingError),
+      100.0f
+    );
 
-    left_motor.setVelocity(fabs(velocity), percent);
-    if (velocity > 0) {
-      left_motor.spin(reverse);
+    if (useLeft) {
+      left_motor.setVelocity(fabs(velocity), percent);
+      left_motor.spin((velocity * spinDir > 0) ? forward : reverse);
     } else {
-      left_motor.spin(forward);
+      right_motor.setVelocity(fabs(velocity), percent);
+      right_motor.spin((velocity * spinDir > 0) ? forward : reverse);
     }
 
+    // Must stay within tolerance for 5 consecutive loops (~100 ms) before stopping
     if (fabs(headingError) <= kAngleToleranceDeg) {
       settledCount++;
-      if (settledCount > 5) {
-        break;
-      }
+      if (settledCount > 5) break;
     } else {
       settledCount = 0;
     }
+
+    // Timeout check — gives up if target is unreachable
+    elapsedTimer += 20;
+    if (elapsedTimer >= timeoutMs) break;
+
     previousHeadingError = headingError;
     wait(20, msec);
   }
@@ -182,92 +181,51 @@ void pivotRightToAngle(float targetAngle)
   right_motor.stop();
 }
 
+// Pivot using the left wheel only (robot rotates rightward)
+void pivotRightToAngle(float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, true,  -1, timeoutMs); }
+// Pivot using the right wheel only (robot rotates leftward)
+void pivotLeftToAngle (float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, false, +1, timeoutMs); }
 
-void pivotLeftToAngle(float targetAngle)
-{
-  left_motor.setStopping(hold);
-  right_motor.setStopping(hold);
-  left_motor.stop();
-  right_motor.stop();
-
-  float headingError = 0.0, previousHeadingError = 0.0;
-  int settledCount = 0;
-
-  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
-
-  while (true)
-  {
-    headingError = normalizeAngle(targetAngle - Gyro2.rotation());
-
-
-    double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
-    
-    // Clamp velocity
-    if (velocity > 100.0) velocity = 100.0;
-    if (velocity < -100.0) velocity = -100.0;
-
-    right_motor.setVelocity(fabs(velocity), percent);
-    if (velocity > 0) {
-      right_motor.spin(forward);
-    } else {
-      right_motor.spin(reverse);
-    }
-
-    if (fabs(headingError) <= kAngleToleranceDeg) {
-      settledCount++;
-      if (settledCount > 5) {
-        break;
-      }
-    } else {
-      settledCount = 0;
-    }
-    previousHeadingError = headingError;
-    wait(20, msec);
-  }
-  right_motor.stop();
-  left_motor.stop();
-}
-
-void spinToAngle(float targetAngle)
-{
+// ── Spin (both wheels, opposite directions) ───────────────────────────────────
+// Turns in place around the robot's center. Faster than pivoting but uses both motors.
+void spinToAngle(float targetAngle, int timeoutMs = 3000) {
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   right_motor.stop();
   left_motor.stop();
-  float headingError = 0.0, previousHeadingError = 0.0;
-  int settledCount = 0;
 
-  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
- 
-  while (true)
-  {
+  float headingError         = 0.0;
+  float previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+  int   settledCount         = 0;
+  int   elapsedTimer         = 0;
+
+  while (true) {
     headingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
+    // PD output
+    double velocity = clamp(
+      headingError * cfg.Kp_SPIN + cfg.Kd_SPIN * (headingError - previousHeadingError),
+      100.0f
+    );
 
-    
-    double velocity = headingError * Kp_SPIN + Kd_SPIN * (headingError - previousHeadingError);
-    // Clamp velocity
-    if (velocity > 100.0) velocity = 100.0;
-    if (velocity < -100.0) velocity = -100.0;
-
-    left_motor.setVelocity(fabs(velocity), percent);
+    left_motor.setVelocity(fabs(velocity),  percent);
     right_motor.setVelocity(fabs(velocity), percent);
 
-    if (velocity > 0) {
-      right_motor.spin(forward);
-      left_motor.spin(reverse);
-    } else {
-      right_motor.spin(reverse);
-      left_motor.spin(forward);
-    }
+    // Positive velocity → turn one way; negative → turn the other
+    if (velocity > 0) { right_motor.spin(forward);  left_motor.spin(reverse); }
+    else              { right_motor.spin(reverse);  left_motor.spin(forward); }
+
     if (fabs(headingError) <= kAngleToleranceDeg) {
       settledCount++;
-      if (settledCount > 5) {
-        break;
-      }
+      if (settledCount > 5) break;
     } else {
       settledCount = 0;
     }
+
+    // Timeout check — gives up if target is unreachable
+    elapsedTimer += 20;
+    if (elapsedTimer >= timeoutMs) break;
+
     previousHeadingError = headingError;
     wait(20, msec);
   }
@@ -275,15 +233,19 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
+// ── Drive straight ────────────────────────────────────────────────────────────
+// Drives to targetDistanceDegrees (motor shaft degrees, not wheel travel distance).
+// velocity sign sets direction; targetAngle keeps the heading locked via PD.
+// timeoutMs : hard cutoff so the robot never gets stuck forever
 void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle,
-                   int settleTimeMs = 150, int timeoutMs = 3000)
-{
+                   int timeoutMs) {
+  const int settleTimeMs = 150;  // ms to stay within threshold before declaring done
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   right_motor.resetPosition();
   left_motor.resetPosition();
 
-  // Direction from velocity, distance always positive
+  // Flip target sign to match velocity direction
   float directionSign = (velocity >= 0) ? 1.0 : -1.0;
   float actualTarget  = directionSign * fabs(targetDistanceDegrees);
   float MAX_DRIVE     = fabs(velocity);
@@ -296,56 +258,46 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
   float prevHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
   const float SETTLE_THRESHOLD = 2.0;
-  const float INTEGRAL_LIMIT   = 25.0;
+  const float INTEGRAL_LIMIT   = 25.0;  // anti-windup cap
 
   int settleTimer  = 0;
   int elapsedTimer = 0;
 
-  while (true)
-  {
+  while (true) {
+    // Average both motors so one slipping doesn't throw off distance tracking
     float averageDistance = (right_motor.position(degrees) + left_motor.position(degrees)) / 2.0;
 
-    // Distance PID
+    // ── Distance PID ──
     distError     = actualTarget - averageDistance;
     distIntegral += distError;
-    if (distIntegral >  INTEGRAL_LIMIT) distIntegral =  INTEGRAL_LIMIT;
+    if (distIntegral >  INTEGRAL_LIMIT) distIntegral =  INTEGRAL_LIMIT;  // clamp to prevent windup
     if (distIntegral < -INTEGRAL_LIMIT) distIntegral = -INTEGRAL_LIMIT;
 
-    float distOutput = Kp_dist * distError
-                     + Ki_dist * distIntegral
-                     + Kd_dist * (distError - prevDistError);
-
-    if (distOutput >  MAX_DRIVE) distOutput =  MAX_DRIVE;
-    if (distOutput < -MAX_DRIVE) distOutput = -MAX_DRIVE;
-
+    float distOutput = clamp(
+      cfg.Kp_dist * distError + cfg.Ki_dist * distIntegral + cfg.Kd_dist * (distError - prevDistError),
+      MAX_DRIVE
+    );
     prevDistError = distError;
 
-    // Heading PD
+    // ── Heading PD (keeps robot going straight) ──
     headingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
-    float headingCorrection = Kp_straight * headingError
-                            + Kd_straight * (headingError - prevHeadingError);
-
+    float headingCorrection = cfg.Kp_straight * headingError
+                            + cfg.Kd_straight * (headingError - prevHeadingError);
     prevHeadingError = headingError;
 
-    // Recalculate every loop — flips correctly during overshoot
+    // Flip correction sign when reversing so heading correction stays correct
     float correctionSign = (distOutput >= 0) ? 1.0 : -1.0;
 
-    // Combine
-    float rightVel = distOutput + headingCorrection * correctionSign;
-    float leftVel  = distOutput - headingCorrection * correctionSign;
-
-    if (rightVel >  100.0) rightVel =  100.0;
-    if (rightVel < -100.0) rightVel = -100.0;
-    if (leftVel  >  100.0) leftVel  =  100.0;
-    if (leftVel  < -100.0) leftVel  = -100.0;
+    float rightVel = clamp(distOutput + headingCorrection * correctionSign, 100.0f);
+    float leftVel  = clamp(distOutput - headingCorrection * correctionSign, 100.0f);
 
     right_motor.setVelocity(fabs(rightVel), percent);
-    left_motor.setVelocity(fabs(leftVel),  percent);
+    left_motor.setVelocity (fabs(leftVel),  percent);
     right_motor.spin(rightVel > 0 ? forward : reverse);
     left_motor.spin (leftVel  > 0 ? forward : reverse);
 
-    // Settle check
+    // ── Settle check ──
     if (fabs(distError) < SETTLE_THRESHOLD) {
       settleTimer += 20;
       if (settleTimer >= settleTimeMs) break;
@@ -353,60 +305,61 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
       settleTimer = 0;
     }
 
-    // Timeout check
+    // ── Timeout check ──
     elapsedTimer += 20;
     if (elapsedTimer >= timeoutMs) break;
 
     wait(20, msec);
   }
-
   right_motor.stop(hold);
   left_motor.stop(hold);
 }
-int configureRobot()
-{
 
-  TouchLED3.setColor(red);
+// ── Setup ─────────────────────────────────────────────────────────────────────
+int configureRobot() {
+  setState(STATE_CALIBRATING);
+  TouchLED3.setColor(red);  // red = not ready yet
+
+  // Pick weight configuration here before anything runs
+  selectConfig(&CONFIG_NO_WEIGHT);
+
+  // All motors default to hold so they don't backdrive when stopped
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   four_bar.setStopping(hold);
   Kamasha.setStopping(hold);
   M_180.setStopping(hold);
+
   right_motor.setVelocity(100.0, percent);
-  left_motor.setVelocity(100.0, percent);
-  four_bar.setMaxTorque(100.0, percent);
-  M_180.setVelocity(100.0, percent);
-  Kamasha.setVelocity(100.0, percent);
+  left_motor.setVelocity (100.0, percent);
+  four_bar.setMaxTorque  (100.0, percent);
+  M_180.setVelocity      (100.0, percent);
+  Kamasha.setVelocity    (100.0, percent);
 
-  right_motor.setStopping(hold);
-  left_motor.setStopping(hold);
-
+  // calSlow gives more accurate gyro calibration at the cost of a longer wait
   Gyro2.calibrate(calSlow);
-  while (Gyro2.isCalibrating())
-  {
-    wait(20, msec); // let the gyro finish calibrating
+  while (Gyro2.isCalibrating()) {
+    wait(20, msec);  // let the gyro finish calibrating
   }
-  Gyro2.setRotation(0.0, degrees);
-  TouchLED3.setColor(green);
+  Gyro2.setRotation(0.0, degrees);  // zero the heading at start position
+
+  TouchLED3.setColor(green);  // green = ready to run
+  setState(STATE_READY);
 
   return 0;
 }
 
-void route(){
-
-
-
-
-
-
+// ── Autonomous Route ──────────────────────────────────────────────────────────
+void route() {
+  // your autonomous sequence goes here
+  setState(STATE_ROUTE_DONE);
 }
 
-int main()
-{
+int main() {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
   configureRobot();
-  TouchLED3.pressed(route);
+  TouchLED3.pressed(route);  // run route() when the touch LED is pressed
 
   wait(15, msec);
 }
