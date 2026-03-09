@@ -13,16 +13,6 @@ using namespace vex;
 // Brain should be defined by default
 brain Brain;
 
-// START IQ MACROS
-#define waitUntil(condition) \
-  do                         \
-  {                          \
-    wait(5, msec);           \
-  } while (!(condition))
-
-#define repeat(iterations) \
-  for (int iterator = 0; iterator < iterations; iterator++)
-// END IQ MACROS
 
 // Robot configuration code.
 gyro Gyro2 = gyro(PORT2);
@@ -100,8 +90,6 @@ void vexcodeInit()
 
 #pragma endregion VEXcode Generated Robot Configuration
 
-// Include the IQ Library
-#include "vex.h"
 
 // Allows for easier use of the VEX Library
 using namespace vex;
@@ -157,16 +145,14 @@ void pivotRightToAngle(float targetAngle)
   float previousHeadingError = 0.0;
   int settledCount = 0;
 
-  previousHeadingError = targetAngle - Gyro2.rotation();
-  if (previousHeadingError > 180) previousHeadingError -= 360;
-  if (previousHeadingError < -180) previousHeadingError += 360;
+  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+
   
  
   while (true)  
   {
-    headingError = targetAngle - Gyro2.rotation();
-    if (headingError > 180) headingError -= 360;
-    if (headingError < -180) headingError += 360;
+    headingError = normalizeAngle(targetAngle - Gyro2.rotation());
+
     
     double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
     
@@ -207,15 +193,12 @@ void pivotLeftToAngle(float targetAngle)
   float headingError = 0.0, previousHeadingError = 0.0;
   int settledCount = 0;
 
-  previousHeadingError = targetAngle - Gyro2.rotation();
-  if (previousHeadingError > 180) previousHeadingError -= 360;
-  if (previousHeadingError < -180) previousHeadingError += 360;
+  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
   while (true)
   {
-    headingError = targetAngle - Gyro2.rotation();
-    if (headingError > 180) headingError -= 360;
-    if (headingError < -180) headingError += 360;
+    headingError = normalizeAngle(targetAngle - Gyro2.rotation());
+
 
     double velocity = headingError * Kp_PIVOT + Kd_PIVOT * (headingError - previousHeadingError);
     
@@ -254,17 +237,13 @@ void spinToAngle(float targetAngle)
   float headingError = 0.0, previousHeadingError = 0.0;
   int settledCount = 0;
 
-  previousHeadingError = targetAngle - Gyro2.rotation();
-  if (previousHeadingError > 180) previousHeadingError -= 360;
-  if (previousHeadingError < -180) previousHeadingError += 360;
-
+  previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+ 
   while (true)
   {
-    headingError = targetAngle - Gyro2.rotation();
+    headingError = normalizeAngle(targetAngle - Gyro2.rotation());
 
-    // Normalize to shortest path (-180 to +180)
-    if(headingError > 180.0) headingError -= 360.0;
-    if(headingError < -180.0) headingError += 360.0;
+
     
     double velocity = headingError * Kp_SPIN + Kd_SPIN * (headingError - previousHeadingError);
     // Clamp velocity
