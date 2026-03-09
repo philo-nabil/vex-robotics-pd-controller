@@ -108,13 +108,18 @@ using namespace vex;
 
 
 // Global Variables
-bool autonomousRunning = false;
 
 float kAngleToleranceDeg = 1.0; // acceptable error band  // <- Modifiable
 
 float Kp_straight = 1.5;
 
 float Kd_straight = 4; 
+
+float Kp_dist;
+
+float Ki_dist;
+
+float Kd_dist;
 
 float Kp_PIVOT = 0.6;
 
@@ -132,8 +137,13 @@ void pivotLeftToAngle(float targetAngle);
 
 void spinToAngle(float targetAngle);
 
-void driveStraight(float speed, float targetDistanceDegrees, float targetAngle);
+void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle, int settleTimeMs = 150, int timeoutMs = 3000);
 
+float normalizeAngle(float angle) {
+  if (angle >  180.0) angle -= 360.0;
+  if (angle < -180.0) angle += 360.0;
+  return angle;
+}
 
 // Defined functions
 void pivotRightToAngle(float targetAngle)
@@ -286,60 +296,86 @@ void spinToAngle(float targetAngle)
   right_motor.stop(hold);
 }
 
-void driveStraight(float speed, float targetDistanceDegrees, float targetAngle)
+void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle, int settleTimeMs = 150, int timeoutMs = 3000)
 {
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
-  right_motor.stop();
-  left_motor.stop();
-
-  float headingError = 0.0, previousHeadingError = 0.0;
-  int settledCount = 0;
-  
-  previousHeadingError = targetAngle - Gyro2.rotation();
-  if (previousHeadingError > 180) previousHeadingError -= 360;
-  if (previousHeadingError < -180) previousHeadingError += 360;
-
   right_motor.resetPosition();
   left_motor.resetPosition();
-  
+
+  float correctionSign = (velocity >= 0) ? 1.0 : -1.0;
+  float actualTarget   = correctionSign * fabs(targetDistanceDegrees);
+  float MAX_DRIVE      = fabs(velocity);
+
+  float distError     = 0.0;
+  float prevDistError = 0.0;
+  float distIntegral  = 0.0;
+
+  float headingError     = 0.0;
+  float prevHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
+
+  const float SETTLE_THRESHOLD = 2.0;
+  const float INTEGRAL_LIMIT   = 25.0;
+
+  int settleTimer  = 0;  // ms spent within threshold
+  int elapsedTimer = 0;  // ms spent total
+
   while (true)
   {
-    float averageDistance = (fabs(right_motor.position(degrees)) + fabs(left_motor.position(degrees))) / 2.0;
-    
-    
-    
-    // Heading PD correction
-    headingError = targetAngle - Gyro2.rotation();
-    if (headingError > 180.0) headingError -= 360.0;
-    if (headingError < -180.0) headingError += 360.0;
-    
-    float headingCorrection = headingError * Kp_straight + Kd_straight * (headingError - previousHeadingError);
-    
-    
-    float rightVel = speed + headingCorrection;
-    float leftVel = speed - headingCorrection;
-    
-    if (rightVel > 100.0) rightVel = 100.0;
-    if (rightVel < -100.0) rightVel = -100.0;
-    if (leftVel > 100.0) leftVel = 100.0;
-    if (leftVel < -100.0) leftVel = -100.0;
-    
-    right_motor.setVelocity(fabs(rightVel), percent);
-    left_motor.setVelocity(fabs(leftVel), percent);
-    right_motor.spin(rightVel > 0 ? forward : reverse);
-    left_motor.spin(leftVel > 0 ? forward : reverse);
+    float averageDistance = (right_motor.position(degrees) + left_motor.position(degrees)) / 2.0;
 
-    if (averageDistance >= targetDistanceDegrees) {
-      settledCount++;
-      if (settledCount > 5) break;
+    // Distance PID
+    distError     = actualTarget - averageDistance;
+    distIntegral += distError;
+    if (distIntegral >  INTEGRAL_LIMIT) distIntegral =  INTEGRAL_LIMIT;
+    if (distIntegral < -INTEGRAL_LIMIT) distIntegral = -INTEGRAL_LIMIT;
+
+    float distOutput = Kp_dist * distError
+                     + Ki_dist * distIntegral
+                     + Kd_dist * (distError - prevDistError);
+
+    if (distOutput >  MAX_DRIVE) distOutput =  MAX_DRIVE;
+    if (distOutput < -MAX_DRIVE) distOutput = -MAX_DRIVE;
+
+    prevDistError = distError;
+
+    // Heading PD
+    headingError = normalizeAngle(targetAngle - Gyro2.rotation());
+
+    float headingCorrection = Kp_straight * headingError
+                            + Kd_straight * (headingError - prevHeadingError);
+
+    prevHeadingError = headingError;
+
+    // Combine
+    float rightVel = distOutput + headingCorrection * correctionSign;
+    float leftVel  = distOutput - headingCorrection * correctionSign;
+
+    if (rightVel >  100.0) rightVel =  100.0;
+    if (rightVel < -100.0) rightVel = -100.0;
+    if (leftVel  >  100.0) leftVel  =  100.0;
+    if (leftVel  < -100.0) leftVel  = -100.0;
+
+    right_motor.setVelocity(fabs(rightVel), percent);
+    left_motor.setVelocity(fabs(leftVel),  percent);
+    right_motor.spin(rightVel > 0 ? forward : reverse);
+    left_motor.spin (leftVel  > 0 ? forward : reverse);
+
+    // Settle check
+    if (fabs(distError) < SETTLE_THRESHOLD) {
+      settleTimer += 20;
+      if (settleTimer >= settleTimeMs) break;  // settled long enough
     } else {
-      settledCount = 0;
+      settleTimer = 0;  // reset if it wobbles out of threshold
     }
-    previousHeadingError = headingError;
+
+    // Timeout check
+    elapsedTimer += 20;
+    if (elapsedTimer >= timeoutMs) break;  // took too long, move on
+
     wait(20, msec);
   }
-  
+
   right_motor.stop(hold);
   left_motor.stop(hold);
 }
