@@ -9,16 +9,6 @@ using namespace vex;
 // Brain should be defined by default
 brain Brain;
 
-// START IQ MACROS
-#define waitUntil(condition) \
-  do                         \
-  {                          \
-    wait(5, msec);           \
-  } while (!(condition))
-
-#define repeat(iterations) \
-  for (int iterator = 0; iterator < iterations; iterator++)
-// END IQ MACROS
 
 // Robot configuration code.
 gyro        Gyro2       = gyro(PORT2);
@@ -275,7 +265,7 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
     prevHeadingError = headingError;
 
     // Flip correction sign when reversing so heading correction stays correct
-    float correctionSign = (distOutput >= 0) ? 1.0 : -1.0;
+    float correctionSign = (velocity >= 0) ? 1.0f : -1.0f;
 
     float rightVel = clamp(distOutput + headingCorrection * correctionSign, 100.0f);
     float leftVel  = clamp(distOutput - headingCorrection * correctionSign, 100.0f);
