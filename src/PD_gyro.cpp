@@ -25,7 +25,7 @@ motor       Kamasha     = motor(PORT4, false);
 // NOTE: Brain.Timer.system() unit is unconfirmed — verify before removing * 1000
 void initializeRandomSeed() {
   wait(100, msec);
-  srand((unsigned int)(vex::timer::system() * 1000));
+  srand(static_cast<unsigned int>(vex::timer::system() * 1000));
 }
 
 void vexcodeInit() {
@@ -297,7 +297,7 @@ int configureRobot() {
 // ── Autonomous Route ──────────────────────────────────────────────────────────
 void route() {
   // your autonomous sequence goes here
-  
+
 }
 
 int main() {
