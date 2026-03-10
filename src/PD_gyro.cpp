@@ -36,39 +36,6 @@ void vexcodeInit() {
 
 using namespace vex;
 
-// ── State Machine ─────────────────────────────────────────────────────────────
-typedef enum {
-  STATE_IDLE,
-  STATE_CALIBRATING,
-  STATE_READY,
-  STATE_DRIVING,
-  STATE_TURNING,
-  STATE_ROUTE_DONE,
-  STATE_ERROR
-} RobotState;
-
-RobotState currentState = STATE_IDLE;
-
-const char* stateToString(RobotState s) {
-  switch(s) {
-    case STATE_IDLE:        return "IDLE";
-    case STATE_CALIBRATING: return "CALIBRATING";
-    case STATE_READY:       return "READY";
-    case STATE_DRIVING:     return "DRIVING";
-    case STATE_TURNING:     return "TURNING";
-    case STATE_ROUTE_DONE:  return "DONE";
-    case STATE_ERROR:       return "ERROR";
-    default:                return "UNKNOWN";
-  }
-}
-
-// Updates the state and immediately prints it to the brain screen for debugging
-void setState(RobotState newState) {
-  currentState = newState;
-  Brain.Screen.clearScreen();
-  Brain.Screen.printAt(5, 60, stateToString(newState));
-}
-
 // ── Adaptive Config ───────────────────────────────────────────────────────────
 // Holds all tuning constants as one swappable block.
 // Call selectConfig() at the start of configureRobot() to pick a preset.
@@ -295,7 +262,7 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 int configureRobot() {
-  setState(STATE_CALIBRATING);
+
   TouchLED3.setColor(red);  // red = not ready yet
 
   // Pick weight configuration here before anything runs
@@ -322,7 +289,7 @@ int configureRobot() {
   Gyro2.setRotation(0.0, degrees);  // zero the heading at start position
 
   TouchLED3.setColor(green);  // green = ready to run
-  setState(STATE_READY);
+
 
   return 0;
 }
@@ -330,7 +297,7 @@ int configureRobot() {
 // ── Autonomous Route ──────────────────────────────────────────────────────────
 void route() {
   // your autonomous sequence goes here
-  setState(STATE_ROUTE_DONE);
+  
 }
 
 int main() {
