@@ -129,12 +129,10 @@ static inline float clamp(float v, float limit) {
 
 // ── Pivot (one wheel only) ────────────────────────────────────────────────────
 // Rotates around the stopped wheel.
-//   useLeft : true  = left motor spins  (robot pivots right)
-//             false = right motor spins (robot pivots left)
-//   spinDir : +1 = spin forward when error > 0
-//             -1 = spin reverse when error > 0
-// Both wrappers below call this so the PD logic is only written once.
-void pivotToAngle(float targetAngle, bool useLeft, int spinDir, int timeoutMs = 3000) {
+//   pivotMotor : the motor that actually spins (pass left_motor or right_motor)
+//   spinDir    : +1 = spin forward when error > 0
+//                -1 = spin reverse when error > 0
+void pivotToAngle(float targetAngle, motor &pivotMotor, int spinDir, int timeoutMs = 3000) {
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
   right_motor.stop();
@@ -142,8 +140,8 @@ void pivotToAngle(float targetAngle, bool useLeft, int spinDir, int timeoutMs = 
 
   float headingError         = 0.0;
   float previousHeadingError = normalizeAngle(targetAngle - Gyro2.rotation());
-  int   settledCount         = 0;  // consecutive loops within tolerance
-  int   elapsedTimer         = 0;
+  int   settledCount         = 0;
+  uint32_t startTime         = Brain.Timer.system();  // ms, confirmed from SDK
 
   while (true) {
     headingError = normalizeAngle(targetAngle - Gyro2.rotation());
@@ -154,25 +152,18 @@ void pivotToAngle(float targetAngle, bool useLeft, int spinDir, int timeoutMs = 
       100.0f
     );
 
-    if (useLeft) {
-      left_motor.setVelocity(fabs(velocity), percent);
-      left_motor.spin((velocity * spinDir > 0) ? forward : reverse);
-    } else {
-      right_motor.setVelocity(fabs(velocity), percent);
-      right_motor.spin((velocity * spinDir > 0) ? forward : reverse);
-    }
+    pivotMotor.setVelocity(fabs(velocity), percent);
+    pivotMotor.spin((velocity * spinDir > 0) ? forward : reverse);
 
     // Must stay within tolerance for 5 consecutive loops (~100 ms) before stopping
     if (fabs(headingError) <= kAngleToleranceDeg) {
-      settledCount++;
-      if (settledCount > 5) break;
+      if (++settledCount > 5) break;
     } else {
       settledCount = 0;
     }
 
-    // Timeout check — gives up if target is unreachable
-    elapsedTimer += 20;
-    if (elapsedTimer >= timeoutMs) break;
+    // Timeout check using Brain timer — no manual counter needed
+    if ((int32_t)(Brain.Timer.system() - startTime) >= timeoutMs) break;
 
     previousHeadingError = headingError;
     wait(20, msec);
@@ -182,9 +173,9 @@ void pivotToAngle(float targetAngle, bool useLeft, int spinDir, int timeoutMs = 
 }
 
 // Pivot using the left wheel only (robot rotates rightward)
-void pivotRightToAngle(float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, true,  -1, timeoutMs); }
+void pivotRightToAngle(float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, left_motor,  -1, timeoutMs); }
 // Pivot using the right wheel only (robot rotates leftward)
-void pivotLeftToAngle (float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, false, +1, timeoutMs); }
+void pivotLeftToAngle (float targetAngle, int timeoutMs = 3000) { pivotToAngle(targetAngle, right_motor, +1, timeoutMs); }
 
 // ── Spin (both wheels, opposite directions) ───────────────────────────────────
 // Turns in place around the robot's center. Faster than pivoting but uses both motors.
