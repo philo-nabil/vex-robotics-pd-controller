@@ -38,3 +38,13 @@
 src/PID_gyro.cpp
 src/PD_Mina_nader.cpp
 src/test.cpp
+
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.elf
+*.map
