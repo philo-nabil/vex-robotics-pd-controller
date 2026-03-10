@@ -147,12 +147,6 @@ Building this project gave hands-on experience with:
 
 ---
 
-## License
-
-MIT License — free to use for learning and competition!
-
----
-
 ## Contributing
 
 This is a learning project, but improvements are always welcome. Feel free to open an issue or submit a pull request.
