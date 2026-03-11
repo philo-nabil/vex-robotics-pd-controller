@@ -70,8 +70,8 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
 
 // Wraps any angle into [-180, +180] so PD controllers always take the shortest path
 float normalizeAngle(float angle) {
-  if (angle >  180.0) angle -= 360.0;
-  if (angle < -180.0) angle += 360.0;
+  if (angle >  180.0f) angle -= 360.0f;
+  if (angle < -180.0f) angle += 360.0f;
   return angle;
 }
 
@@ -107,7 +107,7 @@ void pivotToAngle(const float targetAngle, motor &pivotMotor, const int spinDir,
       100.0f
     );
 
-    pivotMotor.setVelocity(fabsf(velocity), percent);
+    pivotMotor.setVelocity(fabs(velocity), percent);
     pivotMotor.spin((velocity * static_cast<float>(spinDir) > 0) ? forward : reverse);
 
     // Must stay within tolerance for 5 consecutive loops (~100 ms) before stopping
