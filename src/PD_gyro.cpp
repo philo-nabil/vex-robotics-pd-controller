@@ -76,9 +76,9 @@ float normalizeAngle(float angle) {
 }
 
 // Symmetric clamp: keeps v inside [-limit, +limit]
-static inline float clamp(float v, float limit) {
-  if (v >  limit) return  limit;
-  if (v < -limit) return -limit;
+static  float clamp(float v, float limit) {
+  while (v >  limit) return  limit;
+  while (v < -limit) return -limit;
   return v;
 }
 
@@ -128,9 +128,9 @@ void pivotToAngle(const float targetAngle, motor &pivotMotor, const int spinDir,
 }
 
 // Pivot using the left wheel only (robot rotates rightward)
-void pivotRightToAngle(float targetAngle, int timeoutMs) { pivotToAngle(targetAngle, left_motor,  -1, timeoutMs); }
+void pivotRightToAngle(const float targetAngle, const int timeoutMs) { pivotToAngle(targetAngle, left_motor,  -1, timeoutMs); }
 // Pivot using the right wheel only (robot rotates leftward)
-void pivotLeftToAngle (float targetAngle, int timeoutMs) { pivotToAngle(targetAngle, right_motor, +1, timeoutMs); }
+void pivotLeftToAngle (const float targetAngle, const int timeoutMs) { pivotToAngle(targetAngle, right_motor, +1, timeoutMs); }
 
 // ── Spin (both wheels, opposite directions) ───────────────────────────────────
 // Turns in place around the robot's center. Faster than pivoting but uses both motors.
@@ -183,8 +183,8 @@ void spinToAngle(const float targetAngle, const int timeoutMs) {
 // Drives to targetDistanceDegrees (motor shaft degrees, not wheel travel distance).
 // velocity sign sets direction; targetAngle keeps the heading locked via PD.
 // timeoutMs : hard cutoff so the robot never gets stuck forever
-void driveStraight(float velocity, float targetDistanceDegrees, float targetAngle,
-                   int timeoutMs) {
+void driveStraight(const float velocity, const float targetDistanceDegrees, const float targetAngle,
+                   const int timeoutMs) {
   constexpr int settleTimeMs = 150;  // ms to stay within threshold before declaring done
   right_motor.setStopping(hold);
   left_motor.setStopping(hold);
