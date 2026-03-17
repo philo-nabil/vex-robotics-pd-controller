@@ -70,15 +70,15 @@ void driveStraight(float velocity, float targetDistanceDegrees, float targetAngl
 
 // Wraps any angle into [-180, +180] so PD controllers always take the shortest path
 float normalizeAngle(float angle) {
-  if (angle >  180.0f) angle -= 360.0f;
-  if (angle < -180.0f) angle += 360.0f;
+  while (angle >  180.0f) angle -= 360.0f;
+  while (angle < -180.0f) angle += 360.0f;
   return angle;
 }
 
 // Symmetric clamp: keeps v inside [-limit, +limit]
 static  float clamp(float v, float limit) {
-  while (v >  limit) return  limit;
-  while (v < -limit) return -limit;
+  if (v >  limit) return  limit;
+  if (v < -limit) return -limit;
   return v;
 }
 
