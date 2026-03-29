@@ -50,17 +50,17 @@ No integral term means less complexity and no integral windup — perfect for VE
 
 ## Hardware Configuration
 
-| Component | Port |
-|---|---|
-| VEX IQ Brain (1st gen) | — |
-| Right Motor | PORT 8 |
-| Left Motor | PORT 7 |
-| Arm Motor A | PORT 9 |
-| Arm Motor B | PORT 10 |
-| M_180 Motor | PORT 1 |
-| Kamasha Motor | PORT 4 |
-| Gyroscope | PORT 2 |
-| TouchLED | PORT 3 |
+| Component              | Port    |
+|------------------------|---------|
+| VEX IQ Brain (1st gen) | —       |
+| Right Motor            | PORT 8  |
+| Left Motor             | PORT 7  |
+| Arm Motor A            | PORT 9  |
+| Arm Motor B            | PORT 10 |
+| M_180 Motor            | PORT 1  |
+| Kamasha Motor          | PORT 4  |
+| Gyroscope              | PORT 2  |
+| TouchLED               | PORT 3  |
 
 > The **Left Motor** is initialized with `true` (reversed) to account for its mirrored mounting orientation on the drive base.
 
